@@ -15,7 +15,7 @@ void extract_to_footer(FILE *img, struct signature_s *ftype) {
 		inside = 0;
 		for (i=0; i<strlen(ftype->footer); i++) {
 			if (fread(&byte, 1, 1, img) == 0) {
-				puts("\tEOF reached, no file footer found");
+				puts("  --EOF reached, no file footer found");
 				break;
 			}
 			fwrite(&byte, 1, 1, out);
@@ -25,7 +25,7 @@ void extract_to_footer(FILE *img, struct signature_s *ftype) {
 			}
 		}
 	}
-	fseek(img, pos, SEEK_SET);
+	fseek(img, pos+1, SEEK_SET);
 }
 
 int parser_parse(FILE *img, struct signatures_s *sigs) {
@@ -55,10 +55,10 @@ int parser_parse(FILE *img, struct signatures_s *sigs) {
 				extract_to_footer(img, sig);
 				break;
 			}
-
+			
+			fread(&byte, 1, 1, img);
 			sig = sig->next;
 		}
-		fseek(img, 1, SEEK_CUR);
 	}
 	return 0;
 }
