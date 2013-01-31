@@ -1,9 +1,27 @@
 #include <stdio.h>
 #include "signatures.c"
 
-void extract(int pos, struct signature_s *ftype) {
-	printf("%s found at position %d\n", ftype->extension, pos);
-	puts("extract() not yet implemented");
+void extract_to_footer(FILE *img, struct signature_s *ftype) {
+	char *outfile = (char *) malloc(16);
+	char byte;
+	int i, inside = 1, pos = ftell(img);
+	FILE *out;
+
+	sprintf(outfile, "%d%s", pos, ftype->extension);
+	out = fopen(outfile, "w");
+
+	printf("%s found at position %d. Extracting to %s...\n", ftype->extension, pos, outfile);
+	while (inside) {
+		for (i=0; i<strlen(ftype->footer); i++) {
+			fread(&byte, 1, 1, img);
+			fwrite(&byte, 1, 1, out);
+			inside = 0;
+			if (byte != ftype->footer[i]) {
+				inside = 1;
+				break;
+			}
+		}
+	}
 }
 
 int parser_parse(FILE *img, struct signatures_s *sigs) {
@@ -11,11 +29,8 @@ int parser_parse(FILE *img, struct signatures_s *sigs) {
 	int i, pos, match;
 	struct signature_s *sig;
 
-	// look at fseek, ftell, fgetpos, and fsetpos
-
 	while (fread(&byte, 1, 1, img) != 0) {
-		// loop through all signatures
-		pos = ftell(img);
+		pos = ftell(img)-1;
 		sig = sigs->first;
 		while (sig != NULL) {
 			match = 1;
@@ -29,21 +44,26 @@ int parser_parse(FILE *img, struct signatures_s *sigs) {
 					break;
 				}
 			}
-			if (match)
-				extract(pos, sig);
+
+			fseek(img, pos, SEEK_SET);
+
+			if (match) {
+				extract_to_footer(img, sig);
+				break;
+			}
 
 			sig = sig->next;
-			fseek(img, pos, SEEK_SET);
 		}
+		fseek(img, pos+1, SEEK_SET);
 	}
 	return 0;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
 	FILE *fp;
 	struct signatures_s *sigs = retrieve_signatures();
 	
-	fp = fopen("test.img", "rb");
+	fp = fopen(argv[1], "rb");
 	parser_parse(fp, sigs);
 	fclose(fp);
 }	

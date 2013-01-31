@@ -46,6 +46,6 @@ struct signatures_s * retrieve_signatures() {
 	* printf("header: %s\nfooter: %s\next: %s\nlen: %s\n", header, footer, ext, len);
 	*/
 	
-	append_signature(sigs, make_signature("\xff\xd8\xff\xe0", "\x42", ".jpg", 4000));
+	append_signature(sigs, make_signature("\xff\xd8\xff\xe0", "\xff\xd9", ".jpg", 4000));
 	return sigs;
 }
