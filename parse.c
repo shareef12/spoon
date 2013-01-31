@@ -62,12 +62,3 @@ int parser_parse(FILE *img, struct signatures_s *sigs) {
 	}
 	return 0;
 }
-
-int main(int argc, char *argv[]) {
-	FILE *fp;
-	struct signatures_s *sigs = retrieve_signatures();
-	
-	fp = fopen(argv[1], "rb");
-	parser_parse(fp, sigs);
-	fclose(fp);
-}	
