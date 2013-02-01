@@ -1,7 +1,11 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "signatures.c"
 
 void extract_to_footer(FILE *img, struct signature_s *sig) {
-    char buffer[16384], *outfile = (char *) malloc(16);
+    char buffer[16384], outfile[16];
     int read, offset, pos = ftell(img);
     FILE *out;
 

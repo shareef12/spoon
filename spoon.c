@@ -1,9 +1,9 @@
-#include "arg_parse.c"
-#include "parse.c"
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "arg_parse.c"
+#include "parse.c"
 
 void main(int argc, char* argv[]) {                                                                                                                                                                        
     struct arguments* args = parse_args(argc, argv);
