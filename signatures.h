@@ -13,6 +13,9 @@ struct signatures_s {
 };
 
 char * atoh(char *in);
+
 struct signature_s * make_signature(char *header, char *footer, char *extension, int length);
+
 void append_signature(struct signatures_s *sigs, struct signature_s *new_sig);
+
 struct signatures_s * retrieve_signatures();
