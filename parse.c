@@ -1,25 +1,32 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
+#include <limits.h>
 
 #include "signatures.c"
 #include "parse.h"
 
 void extract_to_footer(FILE *img, struct signature_s *sig) {
-    char buffer[16384], outfile[16];
-    int read, offset, pos = ftell(img);
+    char buffer[pagesize], outfile[32];
+    int read, offset, count = 0;
+    off_t pos = ftello(img);
     FILE *out;
 
-    sprintf(outfile, "%d%s", pos, sig->extension);
+    sprintf(outfile, "%jd%s", (intmax_t)pos, sig->extension);
     out = fopen(outfile, "w");
 
-    printf("%s found at position %d. Extracting to %s...\n", sig->extension, pos, outfile);
+    printf("%s found at position %jd. Extracting to %s...\n", sig->extension, (intmax_t)pos, outfile);
     
-    while ((read = fread(buffer, 1, 16384, img)) != 0) {
+    while ((read = fread(buffer, 1, pagesize, img)) != 0) {
         
-        if ((offset = match_sequence(buffer, read, sig->footer)) == 16384) {
-            fwrite(&buffer, 1, 16384 - 2048, out);
-            fseek(img, -2048, SEEK_CUR);
+        if (count > sig->length)
+            break;
+
+        else if ((offset = match_sequence(buffer, read, sig->footer)) == NO_MATCH) {
+            fwrite(&buffer, 1, pagesize - margin, out);
+            count += pagesize - margin;
+            fseeko(img, -margin, SEEK_CUR);
         }
         else {
             fwrite(&buffer, 1, offset + strlen(sig->footer), out);
@@ -35,15 +42,15 @@ void extract_to_footer(FILE *img, struct signature_s *sig) {
     }
     
     fclose(out);
-    fseek(img, pos+1, SEEK_SET);
+    fseeko(img, pos+1, SEEK_SET);
 }
 
 
 int match_sequence(char *buffer, int buflen, char *sequence) {
     int i, j, found;
   
-    if (buflen > 16384 - 2048)
-        buflen = 16384 - 2048;
+    if (buflen > pagesize - margin)
+        buflen = pagesize - margin;
     
     for (i=0; i < buflen; i++) {
         found = 1;
@@ -59,7 +66,7 @@ int match_sequence(char *buffer, int buflen, char *sequence) {
         }
     }
 
-    return 16384;
+    return NO_MATCH;
 }
 
 
@@ -68,10 +75,11 @@ struct match_s * match_header(char *buffer, int buflen, struct signatures_s *sig
     struct signature_s *sig = sigs->first;
     struct match_s *match;
 
-    if (buflen > 16384 - 2048)
-        buflen = 16384 - 2048;
+    if (buflen > pagesize - margin)
+        buflen = pagesize - margin;
 
     for (i=0; i < buflen; i++) {
+        
         while (sig != NULL) {
             found = 1;
             
@@ -100,19 +108,19 @@ struct match_s * match_header(char *buffer, int buflen, struct signatures_s *sig
 
 
 int parser_parse(FILE *img, struct signatures_s *sigs) {
-    char buf[16384];
+    char buf[pagesize];
     int i, read;
     struct signature_s *sig = sigs->first;
     struct match_s *match;
     
-    while ((read = fread(buf, 1, 16384, img)) != 0) {
-
+    while ((read = fread(buf, 1, pagesize, img)) != 0) {
+        
         if ((match = match_header(buf, read, sigs)) != NULL) {
-            fseek(img, match->offset - read, SEEK_CUR);
+            fseeko(img, match->offset - read, SEEK_CUR);
             extract_to_footer(img, match->sig);
         }
-        else if (read > 16384 - 2048) {
-            fseek(img, -2048, SEEK_CUR);
+        else if (read > pagesize - margin) {
+            fseeko(img, -margin, SEEK_CUR);
         }
     }
 
