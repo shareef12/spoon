@@ -4,6 +4,7 @@
 #include <inttypes.h>
 #include <limits.h>
 
+#include "spoon.h"
 #include "signatures.c"
 #include "parse.h"
 
@@ -20,6 +21,7 @@ void extract_to_footer(FILE *img, struct signature_s *sig) {
     
     while ((read = fread(buffer, 1, pagesize, img)) != 0) {
         
+        /* have we reached the max file length? */
         if (count > sig->length)
             break;
 
@@ -30,19 +32,20 @@ void extract_to_footer(FILE *img, struct signature_s *sig) {
         }
         else {
             fwrite(&buffer, 1, offset + strlen(sig->footer), out);
+            if (strcmp(sig->extension, ".zip") == 0) {
+                short zipCommentLen = 0;
+                memcpy(&zipCommentLen, &buffer[offset +20], 2);
+                fwrite(&buffer[offset + 4], 1, 18 + zipCommentLen, out);
+                fseeko(img, offset + 22 + zipCommentLen - read, SEEK_CUR);
+            }            
             break;
         }
     }
     
-    // Plarses for local file header, not beginning of zip
-    if (strcmp(sig->extension, ".zip") == 0) {
-        short zipCommentLen=0;
-        memcpy(&zipCommentLen, &buffer[offset + 20], 2);
-        fwrite(&buffer[offset + 4], 1, 18 + zipCommentLen, out);
-    }
-    
+    if (strcmp(sig->extension, ".zip") != 0)
+        fseeko(img, pos+1, SEEK_SET);
+
     fclose(out);
-    fseeko(img, pos+1, SEEK_SET);
 }
 
 

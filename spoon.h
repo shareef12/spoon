@@ -1,2 +1,8 @@
-extern int pagesize = 16384;
-extern int margin = 2048;
+#ifndef SPOON_H
+#define SPOON_H
+
+extern char *path;
+extern int pagesize;
+extern int margin;
+
+#endif

@@ -3,32 +3,38 @@
 #include <string.h>
 #include <getopt.h>
 
+#include "spoon.h"
 #include "arg_parse.h"
 
+char *path = NULL;
+int pagesize = 16384;
+int margin = 2048;
+int search_embedded = 0;
+
 void usage_error(char *argv) {
-    fprintf(stderr, "Usage: %s [-f filepath]\n",argv);
+    fprintf(stderr, "Usage: %s [-p pagesize] [-m margin] <-f file>\n",argv);
     exit(EXIT_FAILURE);
 }
 
-struct arguments* parse_args(int argc, char *argv[]) {
+void parse_args(int argc, char *argv[]) {
     int opt;
-    struct arguments *args = malloc(sizeof(struct arguments));
-
-    memset(args,0,sizeof(struct arguments));
-
-    while ((opt = getopt(argc, argv, "f:")) != -1) {
+    
+    while ((opt = getopt(argc, argv, "f:p:m:")) != -1) {
         switch (opt) {
             case 'f':
-                args->inPath = optarg;
+                path = optarg;
+                break;
+            case 'p':
+                pagesize = atoi(optarg);
+                break;
+            case 'm':
+                margin = atoi(optarg);
                 break;
             default: 
                 usage_error(argv[0]);
         }
     }
 
-    if(!args->inPath) usage_error(argv[0]);
-
-    return args;
+    if (path == NULL)
+        usage_error(argv[0]);
 }
-
-

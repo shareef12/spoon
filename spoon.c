@@ -1,25 +1,27 @@
 #define _FILE_OFFSET_BITS 64
 #define _LARGEFILE_SOURCE
 
+#include "spoon.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 
-#include "spoon.h"
 #include "arg_parse.c"
 #include "parse.c"
 
-void main(int argc, char* argv[]) {                                                                                                                                                                        
-    struct arguments* args = parse_args(argc, argv);
+void main(int argc, char* argv[]) {
     struct signatures_s *sigs = retrieve_signatures();
     FILE *fp;
     char *cmd;
 
-    printf("Running default forensics on: %s\n", args->inPath);
+    parse_args(argc, argv);
+
+    printf("Running default forensics on: %s\n", path);
 
     
-    if ((fp = fopen(args->inPath, "rb")) == NULL) {
+    if ((fp = fopen(path, "rb")) == NULL) {
         perror("Error opening file");
         exit(EXIT_FAILURE);
     }
@@ -29,7 +31,7 @@ void main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    asprintf(&cmd, "md5sum %s", args->inPath);
+    asprintf(&cmd, "md5sum %s", path);
     //system(cmd);
 
     chdir("results");
