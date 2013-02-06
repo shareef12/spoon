@@ -36,5 +36,6 @@ void main(int argc, char* argv[]) {
 
     chdir("results");
     parser_parse(fp, sigs);
+    puts("Extracted files located in results/");
     fclose(fp);
 }

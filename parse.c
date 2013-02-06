@@ -17,7 +17,8 @@ void extract_to_footer(FILE *img, struct signature_s *sig) {
     sprintf(outfile, "%jd%s", (intmax_t)pos, sig->extension);
     out = fopen(outfile, "w");
 
-    printf("%s found at position %jd. Extracting to %s...\n", sig->extension, (intmax_t)pos, outfile);
+    if (!quiet)
+        printf("%s found at position %jd. Extracting to %s...\n", sig->extension, (intmax_t)pos, outfile);
     
     while ((read = fread(buffer, 1, pagesize, img)) != 0) {
         

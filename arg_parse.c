@@ -9,7 +9,7 @@
 char *path = NULL;
 int pagesize = 16384;
 int margin = 2048;
-int search_embedded = 0;
+int quiet = 0;
 
 void usage_error(char *argv) {
     fprintf(stderr, "Usage: %s [-p pagesize] [-m margin] <-f file>\n",argv);
@@ -19,7 +19,7 @@ void usage_error(char *argv) {
 void parse_args(int argc, char *argv[]) {
     int opt;
     
-    while ((opt = getopt(argc, argv, "f:p:m:")) != -1) {
+    while ((opt = getopt(argc, argv, "f:p:m:q")) != -1) {
         switch (opt) {
             case 'f':
                 path = optarg;
@@ -29,6 +29,9 @@ void parse_args(int argc, char *argv[]) {
                 break;
             case 'm':
                 margin = atoi(optarg);
+                break;
+            case 'q':
+                quiet = 1;
                 break;
             default: 
                 usage_error(argv[0]);

@@ -4,5 +4,6 @@
 extern char *path;
 extern int pagesize;
 extern int margin;
+extern int quiet;
 
 #endif
