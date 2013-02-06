@@ -28,7 +28,8 @@ void extract_to_footer(FILE *img, struct signature_s *sig) {
         else if ((offset = match_sequence(buffer, read, sig->footer)) == NO_MATCH) {
             fwrite(&buffer, 1, pagesize - margin, out);
             count += pagesize - margin;
-            fseeko(img, -margin, SEEK_CUR);
+            if (read > pagesize - margin)
+                fseeko(img, -margin, SEEK_CUR);
         }
         else {
             fwrite(&buffer, 1, offset + strlen(sig->footer), out);
@@ -37,7 +38,7 @@ void extract_to_footer(FILE *img, struct signature_s *sig) {
                 memcpy(&zipCommentLen, &buffer[offset +20], 2);
                 fwrite(&buffer[offset + 4], 1, 18 + zipCommentLen, out);
                 fseeko(img, offset + 22 + zipCommentLen - read, SEEK_CUR);
-            }            
+            } 
             break;
         }
     }
