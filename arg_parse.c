@@ -12,7 +12,7 @@ int margin = 2048;
 int quiet = 0;
 
 void usage_error(char *argv) {
-    fprintf(stderr, "Usage: %s [-p pagesize] [-m margin] <-f file>\n",argv);
+    fprintf(stderr, "Usage: %s [-p pagesize] [-m margin] [-q] [-f file]\n",argv);
     exit(EXIT_FAILURE);
 }
 

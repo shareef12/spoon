@@ -1,0 +1,45 @@
+spoon
+-----
+spoon is a file carver that extracts various file types from an image.
+
+Compiling
+---------
+'gcc spoon.c -o spoon'
+
+Running
+-------
+Usage is './spoon [-p pagesize] [-m margin] [-q] [-f file]'
+
+  -p  Set the pagesize. The pagesize is the size in bytes of the
+      buffer that spoon will read from the image
+      file at a time. Default is 16384.
+
+  -m  Set the margin. The margin is the size in bytes of the
+      overlap page overlap. Default is 2048.
+
+  -q  Run in quiet mode. Don't output messages about extracted
+      files.
+
+  -f  Required. Specify the path to the image file to carve.
+
+Extracted files will be placed in a created results/ directory
+
+Supported File Types
+--------------------
+.jpg    Fully Tested
+.png    Fully Tested
+.pdf    Fully Tested
+.zip    Fully Tested
+.doc    Incomplete -> file created will have .doc extension, but may be .xls or .ppt
+.gif    Incomplete -> footer too short to extract entire gif
+
+Design
+------
+Reads data from the image in 4kb chunks, and looks for headers in each chunk that do not begin in the margin. If a header is found, it will extract the file byte by byte until a corresponding footer is found or the maximum file length is reached. This information is located in spoon.conf.
+
+Future Improvements
+-------------------
+- Increase amount of supported file types by examining file signatures
+- Extract metadata from files as they are being pulled from the image
+- Incorporate multithreading
+- Create a master record of all files extracted, with hashes of each file and metadata about the run, including the time of day and total time to scan the image
