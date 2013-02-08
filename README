@@ -35,7 +35,7 @@ Supported File Types
 
 Design
 ------
-Reads data from the image in 4kb chunks, and looks for headers in each chunk that do not begin in the margin. If a header is found, it will extract the file byte by byte until a corresponding footer is found or the maximum file length is reached. This information is located in spoon.conf.
+Reads data from the image in 16kb chunks, and looks for headers in each chunk that do not begin in the margin. If a header is found, it will extract the file byte by byte until a corresponding footer is found or the maximum file length is reached. This information is located in spoon.conf.
 
 Future Improvements
 -------------------
