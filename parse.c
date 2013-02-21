@@ -3,16 +3,21 @@
 #include <string.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <openssl/evp.h>
 
 #include "spoon.h"
 #include "signatures.c"
 #include "parse.h"
 
-void extract_to_footer(FILE *img, struct signature_s *sig) {
+void extract_to_footer(FILE *img, struct signature_s *sig, FILE *log) {
     char buffer[pagesize], outfile[32];
-    int read, offset, count = 0;
+    int i, read, offset, count = 0;
     off_t pos = ftello(img);
     FILE *out;
+    EVP_MD_CTX mdctx;
+    unsigned char digest[EVP_MAX_MD_SIZE];
+
+    EVP_DigestInit(&mdctx, EVP_md5());
 
     sprintf(outfile, "%jd%s", (intmax_t)pos, sig->extension);
     out = fopen(outfile, "w");
@@ -22,22 +27,32 @@ void extract_to_footer(FILE *img, struct signature_s *sig) {
     
     while ((read = fread(buffer, 1, pagesize, img)) != 0) {
         
-        /* have we reached the max file length? */
+        // Reached Max file length
         if (count > sig->length)
             break;
 
+        // Haven't found a footer
         else if ((offset = match_sequence(buffer, read, sig->footer)) == NO_MATCH) {
             fwrite(&buffer, 1, pagesize - margin, out);
             count += pagesize - margin;
+            
+            EVP_DigestUpdate(&mdctx, &buffer, pagesize - margin);
+
             if (read > pagesize - margin)
                 fseeko(img, -margin, SEEK_CUR);
         }
+
+        // Found a footer
         else {
             fwrite(&buffer, 1, offset + strlen(sig->footer), out);
+            EVP_DigestUpdate(&mdctx, &buffer, offset + strlen(sig->footer));
+
             if (strcmp(sig->extension, ".zip") == 0) {
                 short zipCommentLen = 0;
                 memcpy(&zipCommentLen, &buffer[offset +20], 2);
                 fwrite(&buffer[offset + 4], 1, 18 + zipCommentLen, out);
+                EVP_DigestUpdate(&mdctx, &buffer[offset+4], 18 + zipCommentLen);
+
                 fseeko(img, offset + 22 + zipCommentLen - read, SEEK_CUR);
             } 
             break;
@@ -47,6 +62,13 @@ void extract_to_footer(FILE *img, struct signature_s *sig) {
     if (strcmp(sig->extension, ".zip") != 0)
         fseeko(img, pos+1, SEEK_SET);
 
+    EVP_DigestFinal_ex(&mdctx, digest, NULL);
+    EVP_MD_CTX_cleanup(&mdctx);
+
+    for (i=0; i<16; i++)
+        fprintf(log, "%02x", digest[i]);
+    fprintf(log, ",%s\n", outfile);
+    
     fclose(out);
 }
 
@@ -112,7 +134,7 @@ struct match_s * match_header(char *buffer, int buflen, struct signatures_s *sig
 }
 
 
-int parser_parse(FILE *img, struct signatures_s *sigs) {
+int parser_parse(FILE *img, struct signatures_s *sigs, FILE *logfile) {
     char buf[pagesize];
     int i, read;
     struct signature_s *sig = sigs->first;
@@ -122,7 +144,8 @@ int parser_parse(FILE *img, struct signatures_s *sigs) {
         
         if ((match = match_header(buf, read, sigs)) != NULL) {
             fseeko(img, match->offset - read, SEEK_CUR);
-            extract_to_footer(img, match->sig);
+            extract_to_footer(img, match->sig, logfile);
+            free(match);
         }
         else if (read > pagesize - margin) {
             fseeko(img, -margin, SEEK_CUR);

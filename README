@@ -4,7 +4,7 @@ spoon is a file carver that extracts various file types from an image.
 
 Compiling
 ---------
-'gcc spoon.c -o spoon'
+'gcc spoon.c -o spoon -lcrypto'
 
 Running
 -------

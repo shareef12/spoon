@@ -7,13 +7,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
 
 #include "arg_parse.c"
 #include "parse.c"
 
 void main(int argc, char* argv[]) {
     struct signatures_s *sigs = retrieve_signatures();
-    FILE *fp;
+    FILE *fp, *logfile;
     char *cmd;
 
     parse_args(argc, argv);
@@ -31,11 +32,21 @@ void main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    asprintf(&cmd, "md5sum %s", path);
-    //system(cmd);
-
     chdir("results");
-    parser_parse(fp, sigs);
+    logfile = fopen("results.log", "w");
+
+    time_t tm;
+    char timeMsg[64];
+    time(&tm);
+    strftime(timeMsg, 64, "Ran at: %H:%M:%S %d %B %Y\n", localtime(&tm));
+
+    fprintf(logfile, "Spoon v2.0\n");
+    fprintf(logfile, "%s\n", timeMsg);
+    fprintf(logfile, "Extracted Files\n");
+    fprintf(logfile, "===============\n");
+
+    parser_parse(fp, sigs, logfile);
     puts("Extracted files located in results/");
     fclose(fp);
+    fclose(logfile);
 }
