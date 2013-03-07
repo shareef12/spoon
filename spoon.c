@@ -11,6 +11,7 @@
 
 #include "arg_parse.c"
 #include "parse.c"
+#include "submit.c"
 
 void main(int argc, char* argv[]) {
     struct signatures_s *sigs = retrieve_signatures();
@@ -33,7 +34,7 @@ void main(int argc, char* argv[]) {
     }
 
     chdir("results");
-    logfile = fopen("results.log", "w");
+    logfile = fopen("files.log", "w");
 
     time_t tm;
     char timeMsg[64];
@@ -46,7 +47,10 @@ void main(int argc, char* argv[]) {
     fprintf(logfile, "===============\n");
 
     parser_parse(fp, sigs, logfile);
-    puts("Extracted files located in results/");
     fclose(fp);
     fclose(logfile);
+
+    puts("Sending hashes to hash.cymru.com...");
+    send_hashes();
+    puts("Extracted files located in results/");
 }
