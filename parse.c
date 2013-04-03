@@ -17,8 +17,10 @@ void extract_to_footer(FILE *img, struct signature_s *sig, FILE *log) {
     EVP_MD_CTX mdctx;
     unsigned char digest[EVP_MAX_MD_SIZE];
 
+    // Initialize MD5 context
     EVP_DigestInit(&mdctx, EVP_md5());
 
+    // Create destination file
     sprintf(outfile, "%jd%s", (intmax_t)pos, sig->extension);
     out = fopen(outfile, "w");
 
@@ -27,12 +29,12 @@ void extract_to_footer(FILE *img, struct signature_s *sig, FILE *log) {
     
     while ((read = fread(buffer, 1, pagesize, img)) != 0) {
         
-        // Reached Max file length
+        // Reached max file length defined in spoon.conf
         if (count > sig->length)
             break;
 
-        // Haven't found a footer
-        else if ((offset = match_sequence(buffer, read, sig->footer)) == NO_MATCH) {
+        // Haven't found a footer yet
+        else if ( (offset = match_sequence( buffer, read, sig->footer )) == NO_MATCH) {
             fwrite(&buffer, 1, pagesize - margin, out);
             count += pagesize - margin;
             
@@ -45,12 +47,13 @@ void extract_to_footer(FILE *img, struct signature_s *sig, FILE *log) {
         // Found a footer
         else {
             fwrite(&buffer, 1, offset + strlen(sig->footer), out);
-            EVP_DigestUpdate(&mdctx, &buffer, offset + strlen(sig->footer));
-
-            if (strcmp(sig->extension, ".zip") == 0) {
+            EVP_DigestUpdate( &mdctx, &buffer, offset + strlen(sig->footer) );
+            
+            // account for optional comment at the end of a zipfile
+            if ( strcmp( sig->extension, ".zip" ) == 0) {
                 short zipCommentLen = 0;
-                memcpy(&zipCommentLen, &buffer[offset +20], 2);
-                fwrite(&buffer[offset + 4], 1, 18 + zipCommentLen, out);
+                memcpy( &zipCommentLen, &buffer[offset + 20], 2);
+                fwrite( &buffer[offset + 4], 1, 18 + zipCommentLen, out);
                 EVP_DigestUpdate(&mdctx, &buffer[offset+4], 18 + zipCommentLen);
 
                 fseeko(img, offset + 22 + zipCommentLen - read, SEEK_CUR);
@@ -62,9 +65,11 @@ void extract_to_footer(FILE *img, struct signature_s *sig, FILE *log) {
     if (strcmp(sig->extension, ".zip") != 0)
         fseeko(img, pos+1, SEEK_SET);
 
+    // Complete MD5 of extracted file
     EVP_DigestFinal_ex(&mdctx, digest, NULL);
     EVP_MD_CTX_cleanup(&mdctx);
 
+    // Write hash and filename to files.log
     for (i=0; i<16; i++)
         fprintf(log, "%02x", digest[i]);
     fprintf(log, ",%s\n", outfile);

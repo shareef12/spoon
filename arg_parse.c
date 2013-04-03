@@ -7,22 +7,26 @@
 #include "arg_parse.h"
 
 char *path = NULL;
+char *out = ".";
 int pagesize = 16384;
 int margin = 2048;
 int quiet = 0;
 
 void usage_error(char *argv) {
-    fprintf(stderr, "Usage: %s [-p pagesize] [-m margin] [-q] [-f file]\n",argv);
+    fprintf(stderr, "Usage: %s <-f file> [-o outputPath] [-p pagesize] [-m margin] [-q]\n",argv);
     exit(EXIT_FAILURE);
 }
 
 void parse_args(int argc, char *argv[]) {
     int opt;
     
-    while ((opt = getopt(argc, argv, "f:p:m:q")) != -1) {
+    while ((opt = getopt(argc, argv, "f:o:p:m:q")) != -1) {
         switch (opt) {
             case 'f':
                 path = optarg;
+                break;
+            case 'o':
+                out = optarg;
                 break;
             case 'p':
                 pagesize = atoi(optarg);

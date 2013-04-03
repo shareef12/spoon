@@ -28,13 +28,20 @@ void main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if (mkdir("results", 0777) == -1) {
-        perror("Error creating output directory");
-        exit(EXIT_FAILURE);
+    if (mkdir(out, 0777) == -1) {
+        if (errno != EEXIST) {
+            perror("Error creating output directory");
+            exit(EXIT_FAILURE);
+        }
     }
 
-    chdir("results");
+    chdir(out);
+    system("rm -rf spoonResults");
+    mkdir("spoonResults", 0777);
+    chdir("spoonResults");
     logfile = fopen("files.log", "w");
+    mkdir("extracted", 0777);
+    chdir("extracted");
 
     time_t tm;
     char timeMsg[64];
@@ -50,7 +57,8 @@ void main(int argc, char* argv[]) {
     fclose(fp);
     fclose(logfile);
 
+    chdir("../");
     puts("Sending hashes to hash.cymru.com...");
     send_hashes();
-    puts("Extracted files located in results/");
+    printf("Extracted files located in %s/spoonResults/\n", out);
 }

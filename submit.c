@@ -9,6 +9,7 @@ void submit(FILE *in, FILE *out, int sock) {
     char *hash, *fname, buffer[256], *line = NULL;
     int i, n=256;
 
+    memset(buffer, 0, 256);
     for (i=0; i<5; i++) {
         getline(&line, &n, in);
     }
@@ -31,28 +32,36 @@ int send_hashes() {
     in = fopen("files.log", "r");
     out = fopen("hashCheck.log", "w");
 
+    // socket
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         return 1;
 
+    // gethostbyname
     if ((dst = gethostbyname("hash.cymru.com")) == NULL)
         return 1;
 
+    // sockaddr_in
     dst_addr.sin_family = AF_INET;
     dst_addr.sin_port = htons(43);
-    bcopy((char *)dst->h_addr, (char *)&dst_addr.sin_addr.s_addr, dst->h_length);
-    memset(&(dst_addr.sin_zero), 0, 8);
+    bcopy( (char *)dst->h_addr,
+           (char *)&dst_addr.sin_addr.s_addr,
+           dst->h_length
+         );
+    memset( &(dst_addr.sin_zero), 0, 8);
 
     if (connect(sockfd, (struct sockaddr *)&dst_addr, sizeof(struct sockaddr)) < 0)
         return 1;
 
-    
+    // send data
     send(sockfd, "begin\n", 6, 0);
     recv(sockfd, buffer, 255, 0);
     fprintf(out, "%s", buffer);
 
-    submit(in, out, sockfd);  
+    submit(in, out, sockfd);
 
-    fprintf(out, "\n");
+    send(sockfd, "end\n", 4, 0);
+
+
     fclose(in);
     fclose(out);
     close(sockfd);
