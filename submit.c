@@ -7,7 +7,8 @@
 
 void submit(FILE *in, FILE *out, int sock) {
     char *hash, *fname, buffer[256], *line = NULL;
-    int i, n=256;
+    int i;
+    size_t n = 256;
 
     memset(buffer, 0, 256);
     for (i=0; i<5; i++) {

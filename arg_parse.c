@@ -11,6 +11,7 @@ char *out = ".";
 int pagesize = 16384;
 int margin = 2048;
 int quiet = 0;
+int pipefd = 0;
 
 void usage_error(char *argv) {
     fprintf(stderr, "Usage: %s <-f file> [-o outputPath] [-p pagesize] [-m margin] [-q]\n",argv);
@@ -20,7 +21,7 @@ void usage_error(char *argv) {
 void parse_args(int argc, char *argv[]) {
     int opt;
     
-    while ((opt = getopt(argc, argv, "f:o:p:m:q")) != -1) {
+    while ((opt = getopt(argc, argv, "f:o:p:m:g:q")) != -1) {
         switch (opt) {
             case 'f':
                 path = optarg;
@@ -33,6 +34,12 @@ void parse_args(int argc, char *argv[]) {
                 break;
             case 'm':
                 margin = atoi(optarg);
+                break;
+            case 'g':
+                pipefd = atoi(optarg);
+                dup2(pipefd, 0);
+                dup2(pipefd, 1);
+                dup2(pipefd, 2);
                 break;
             case 'q':
                 quiet = 1;

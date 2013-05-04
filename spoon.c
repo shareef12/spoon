@@ -20,7 +20,14 @@ void main(int argc, char* argv[]) {
 
     parse_args(argc, argv);
 
-    printf("Running default forensics on: %s\n", path);
+    puts("");
+    puts(" ==============================");
+    puts("|          SPOON v3.0          |");
+    puts("|                              |");
+    puts("|    CDTs Allison, Sharpsten   |");
+    puts(" ==============================");
+    puts("");
+    fflush(stdout);
 
     
     if ((fp = fopen(path, "rb")) == NULL) {
@@ -28,17 +35,17 @@ void main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if (mkdir(out, 0777) == -1) {
-        if (errno != EEXIST) {
-            perror("Error creating output directory");
-            exit(EXIT_FAILURE);
-        }
+    if (chdir(out) < 0) {
+        perror("Error changing to outpur directory");
+        exit(EXIT_FAILURE);
     }
-
-    chdir(out);
     system("rm -rf spoonResults");
-    mkdir("spoonResults", 0777);
+    if (mkdir("spoonResults", 0777) < 0) {
+        perror("Cannot create output directory");
+        exit(EXIT_FAILURE);
+    }
     chdir("spoonResults");
+    
     logfile = fopen("files.log", "w");
     mkdir("extracted", 0777);
     chdir("extracted");
@@ -48,7 +55,7 @@ void main(int argc, char* argv[]) {
     time(&tm);
     strftime(timeMsg, 64, "Ran at: %H:%M:%S %d %B %Y\n", localtime(&tm));
 
-    fprintf(logfile, "Spoon v2.0\n");
+    fprintf(logfile, "Spoon v3.0\n");
     fprintf(logfile, "%s\n", timeMsg);
     fprintf(logfile, "Extracted Files\n");
     fprintf(logfile, "===============\n");
@@ -58,7 +65,9 @@ void main(int argc, char* argv[]) {
     fclose(logfile);
 
     chdir("../");
+    puts("");
     puts("Sending hashes to hash.cymru.com...");
+    fflush(stdout);
     send_hashes();
     printf("Extracted files located in %s/spoonResults/\n", out);
 }

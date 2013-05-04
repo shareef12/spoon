@@ -4,8 +4,8 @@ spoon is a file carver that extracts various file types from an image.
 
 Compiling
 ---------
-Must have libssl-dev package
-'gcc spoon.c -o spoon -lcrypto'
+Must have libssl-dev and libgtk-3-dev packages
+'./compile.sh'
 
 Running
 -------
