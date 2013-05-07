@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
     g_signal_connect(outDir_chooser, "file-set", G_CALLBACK(update_outDir), NULL);
 
     // run/exif
-    run = gtk_button_new_with_label("Run");
+    run = gtk_button_new_with_label("Spoon");
     exif = gtk_button_new_with_label("Exif");
     gtk_widget_set_size_request(run, 80, 35);
     gtk_widget_set_size_request(exif, 80, 35);
