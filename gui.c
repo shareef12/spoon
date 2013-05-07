@@ -13,7 +13,7 @@ GtkWidget *scrolledWindow;
 GtkTextBuffer *buffer;
 GtkTextIter iter;
 
-void run_spoon() {
+void run_tool(char *tool) {
     const char *file = gtk_entry_get_text(GTK_ENTRY(inFile_entry));
     const char *out = gtk_entry_get_text(GTK_ENTRY(outDir_entry));
     int pagesize = atoi(gtk_entry_get_text(GTK_ENTRY(pageSize_entry)));
@@ -29,7 +29,11 @@ void run_spoon() {
     
     int cmdLen = strlen(file) + strlen(out) + 64;
     char cmd[cmdLen];
-    snprintf(cmd, cmdLen, "./spoon -f %s -o %s -p %d -m %d -g %d", file, out, pagesize, margin, pipefd[1]);
+ 
+    if (strcmp(tool, "spoon") == 0)
+        snprintf(cmd, cmdLen, "./spoon -f %s -o %s -p %d -m %d -g %d", file, out, pagesize, margin, pipefd[1]);
+    else
+        snprintf(cmd, cmdLen, "./exif -f %s -g %d", file, pipefd[1]);
     
     pid_t cpid;
     cpid = fork();
@@ -61,9 +65,8 @@ void run_spoon() {
     }
 }
 
-void run_exif() {
-
-}
+void run_spoon() {run_tool("spoon");}
+void run_exif()  {run_tool("exif");}
 
 void gui_write(char *line) {
     gtk_text_buffer_insert_with_tags_by_name(buffer, &iter, line, -1, "all", NULL);
@@ -113,7 +116,7 @@ int main(int argc, char *argv[]) {
     inFile_entry = gtk_entry_new();
     outDir_entry = gtk_entry_new();
     gtk_entry_set_width_chars(GTK_ENTRY(inFile_entry), 50);
-    gtk_entry_set_text(GTK_ENTRY(inFile_entry), "~/spoon/images/real.img");
+    // gtk_entry_set_text(GTK_ENTRY(inFile_entry), "~/spoon/images/real.img");
     gtk_entry_set_width_chars(GTK_ENTRY(outDir_entry), 50);
     gtk_entry_set_text(GTK_ENTRY(outDir_entry), cwd);
     gtk_fixed_put(GTK_FIXED(frame), inFile_entry, 140, 60);
