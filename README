@@ -23,7 +23,13 @@ Usage is './spoon [-p pagesize] [-m margin] [-q] [-f file]'
 
   -f  Required. Specify the path to the image file to carve.
 
-Extracted files will be placed in a created results/ directory
+Extracted files will be placed in spoonResults/ along with
+a timestamp for when spoon was run and a log of all files.
+
+To run the gui utility, the usage is './gui'
+
+To run the exif parser on the cmd line, the usage is
+'./exif -f <file>'
 
 Supported File Types
 --------------------
@@ -43,4 +49,3 @@ Future Improvements
 - Increase amount of supported file types by examining file signatures
 - Extract metadata from files as they are being pulled from the image
 - Incorporate multithreading
-- Create a master record of all files extracted, with hashes of each file and metadata about the run, including the time of day and total time to scan the image
