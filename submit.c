@@ -5,7 +5,9 @@
 #include <sys/types.h>
 #include <netdb.h>
 
-void submit(FILE *in, FILE *out, int sock) {
+void submit_hashes(FILE *in, FILE *out, int sock) {
+    // Iterate through files.log and submit all hashes
+    // for extracted files
     char *hash, *fname, buffer[256], *line = NULL;
     int i;
     size_t n = 256;
@@ -24,6 +26,8 @@ void submit(FILE *in, FILE *out, int sock) {
 }
 
 int send_hashes() {
+    // Send hashes of all extracted files to
+    // hash.cymru.com to check against known malware
     char buffer[256];
     int sockfd;
     struct sockaddr_in dst_addr;
@@ -33,15 +37,13 @@ int send_hashes() {
     in = fopen("files.log", "r");
     out = fopen("hashCheck.log", "w");
 
-    // socket
+    // Connect to hash.cymru.com on port 43
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         return 1;
 
-    // gethostbyname
     if ((dst = gethostbyname("hash.cymru.com")) == NULL)
         return 1;
 
-    // sockaddr_in
     dst_addr.sin_family = AF_INET;
     dst_addr.sin_port = htons(43);
     bcopy( (char *)dst->h_addr,
@@ -53,15 +55,14 @@ int send_hashes() {
     if (connect(sockfd, (struct sockaddr *)&dst_addr, sizeof(struct sockaddr)) < 0)
         return 1;
 
-    // send data
+    // Begin sending data
     send(sockfd, "begin\n", 6, 0);
     recv(sockfd, buffer, 255, 0);
     fprintf(out, "%s", buffer);
 
-    submit(in, out, sockfd);
+    submit_hashes(in, out, sockfd);
 
     send(sockfd, "end\n", 4, 0);
-
 
     fclose(in);
     fclose(out);
