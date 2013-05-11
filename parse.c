@@ -4,42 +4,47 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <openssl/evp.h>
+#include <unistd.h>
 
 #include "spoon.h"
 #include "signatures.c"
 #include "parse.h"
 
 void extract_to_footer(FILE *img, struct signature_s *sig, FILE *log) {
-    char buffer[pagesize], outfile[32];
-    int i, read, offset, count = 0;
+    char buffer[pagesize], fname[32], digest[EVP_MAX_MD_SIZE];
+    int i, read, offset, size = 0;
     off_t pos = ftello(img);
-    FILE *out;
+    FILE *new;
     EVP_MD_CTX mdctx;
-    unsigned char digest[EVP_MAX_MD_SIZE];
+    pid_t cpid;
 
-    // Initialize MD5 context
-    EVP_DigestInit(&mdctx, EVP_md5());
+    sprintf(fname, "%jd%s", (intmax_t)pos, sig->extension);
+    new = fopen(fname, "w");
+    
+    cpid = fork();
+    
+    if (cpid != 0) {
+        if (!quiet) {
+            printf("%s found at position %jd. Extracting to %s...\n", sig->extension + 1, (intmax_t)pos, fname);
+            fflush(stdout); 
+        }
 
-    // Create destination file
-    sprintf(outfile, "%jd%s", (intmax_t)pos, sig->extension);
-    out = fopen(outfile, "w");
-
-    if (!quiet) {
-        printf("%s found at position %jd. Extracting to %s...\n", sig->extension + 1, (intmax_t)pos, outfile);
-        fflush(stdout); 
+        fread(buffer, 1, 1, img);
+        return;
     }
     
+    EVP_DigestInit(&mdctx, EVP_md5());
+
     while ((read = fread(buffer, 1, pagesize, img)) != 0) {
         
-        // Reached max file length defined in spoon.conf
-        if (count > sig->length)
+        // Once we reach the maximum file length, stop extracting the file
+        if (size > sig->length)
             break;
 
-        // Haven't found a footer yet
+        // If we haven't found a footer, look at the next page
         else if ( (offset = match_sequence( buffer, read, sig->footer )) == NO_MATCH) {
-            fwrite(&buffer, 1, pagesize - margin, out);
-            count += pagesize - margin;
-            
+            fwrite(&buffer, 1, pagesize - margin, new);
+            size += pagesize - margin;
             EVP_DigestUpdate(&mdctx, &buffer, pagesize - margin);
 
             if (read > pagesize - margin)
@@ -48,14 +53,14 @@ void extract_to_footer(FILE *img, struct signature_s *sig, FILE *log) {
 
         // Found a footer
         else {
-            fwrite(&buffer, 1, offset + strlen(sig->footer), out);
+            fwrite(&buffer, 1, offset + strlen(sig->footer), new);
             EVP_DigestUpdate( &mdctx, &buffer, offset + strlen(sig->footer) );
             
             // account for optional comment at the end of a zipfile
             if ( strcmp( sig->extension, ".zip" ) == 0) {
                 short zipCommentLen = 0;
                 memcpy( &zipCommentLen, &buffer[offset + 20], 2);
-                fwrite( &buffer[offset + 4], 1, 18 + zipCommentLen, out);
+                fwrite( &buffer[offset + 4], 1, 18 + zipCommentLen, new);
                 EVP_DigestUpdate(&mdctx, &buffer[offset+4], 18 + zipCommentLen);
 
                 fseeko(img, offset + 22 + zipCommentLen - read, SEEK_CUR);
@@ -64,9 +69,6 @@ void extract_to_footer(FILE *img, struct signature_s *sig, FILE *log) {
         }
     }
     
-    if (strcmp(sig->extension, ".zip") != 0)
-        fseeko(img, pos+1, SEEK_SET);
-
     // Complete MD5 of extracted file
     EVP_DigestFinal_ex(&mdctx, digest, NULL);
     EVP_MD_CTX_cleanup(&mdctx);
@@ -74,15 +76,22 @@ void extract_to_footer(FILE *img, struct signature_s *sig, FILE *log) {
     // Write hash and filename to files.log
     for (i=0; i<16; i++)
         fprintf(log, "%02x", digest[i]);
-    fprintf(log, ",%s\n", outfile);
+    fprintf(log, ",%s\n", fname);
     
-    fclose(out);
+    fclose(new);
+    exit(0);
 }
 
 
 int match_sequence(char *buffer, int buflen, char *sequence) {
     int i, j, found;
-  
+
+    /* 
+     * Only examine sequences that start in the first (pagesize - margin) bytes.
+     * The margin allows us to catch sequences that may span two pages.
+     * Sequences that start in the margin will be found in the next block when
+     * match_sequence is called again.
+     */ 
     if (buflen > pagesize - margin)
         buflen = pagesize - margin;
     
@@ -109,11 +118,17 @@ struct match_s * match_header(char *buffer, int buflen, struct signatures_s *sig
     struct signature_s *sig = sigs->first;
     struct match_s *match;
 
+    /* 
+     *Only examine headers that start in the first (pagesize - margin) bytes.
+     * The margin allows us to catch headers that may span two pages.
+     * Headers that start in the margin will be found in the next block when
+     * match_header is called again.
+     */ 
     if (buflen > pagesize - margin)
         buflen = pagesize - margin;
 
     for (i=0; i < buflen; i++) {
-        
+
         while (sig != NULL) {
             found = 1;
             
