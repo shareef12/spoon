@@ -10,22 +10,23 @@
 #include "signatures.c"
 #include "parse.h"
 
-void extract_to_footer(FILE *img, struct signature_s *sig, FILE *log) {
+
+// look at difference between size_t and off_t
+void extract_to_footer(FILE *img, size_t base, struct signature_s *sig, FILE *log) {
     char buffer[pagesize], fname[32], digest[EVP_MAX_MD_SIZE];
     int i, read, offset, size = 0;
-    off_t pos = ftello(img);
     FILE *new;
     EVP_MD_CTX mdctx;
     pid_t cpid;
 
-    sprintf(fname, "%jd%s", (intmax_t)pos, sig->extension);
+    sprintf(fname, "%jd%s", base, sig->extension);
     new = fopen(fname, "w");
     
     cpid = fork();
     
     if (cpid != 0) {
         if (!quiet) {
-            printf("%s found at position %jd. Extracting to %s...\n", sig->extension + 1, (intmax_t)pos, fname);
+            printf("%s found at position %jd. Extracting to %s...\n", sig->extension + 1, base, fname);
             fflush(stdout); 
         }
 
@@ -33,6 +34,7 @@ void extract_to_footer(FILE *img, struct signature_s *sig, FILE *log) {
         return;
     }
     
+    fseeko(img, base, SEEK_SET);
     EVP_DigestInit(&mdctx, EVP_md5());
 
     while ((read = fread(buffer, 1, pagesize, img)) != 0) {
@@ -75,8 +77,9 @@ void extract_to_footer(FILE *img, struct signature_s *sig, FILE *log) {
 
     // Write hash and filename to files.log
     for (i=0; i<16; i++)
-        fprintf(log, "%02x", digest[i]);
+        fprintf(log, "%02x", (unsigned char) digest[i]);
     fprintf(log, ",%s\n", fname);
+    fflush(log);
     
     fclose(new);
     exit(0);
@@ -113,66 +116,40 @@ int match_sequence(char *buffer, int buflen, char *sequence) {
 }
 
 
-struct match_s * match_header(char *buffer, int buflen, struct signatures_s *sigs) {
-    int i, j, found;
-    struct signature_s *sig = sigs->first;
-    struct match_s *match;
-
-    /* 
-     *Only examine headers that start in the first (pagesize - margin) bytes.
-     * The margin allows us to catch headers that may span two pages.
-     * Headers that start in the margin will be found in the next block when
-     * match_header is called again.
-     */ 
-    if (buflen > pagesize - margin)
-        buflen = pagesize - margin;
-
-    for (i=0; i < buflen; i++) {
-
-        while (sig != NULL) {
-            found = 1;
-            
-            for (j=0; j < strlen(sig->header); j++) {
-                if (buffer[i+j] != sig->header[j]) {
-                    found = 0;
-                    break;
-                }
-            }
-
-            if (found) {
-                match = (struct match_s *) malloc(sizeof(struct match_s));
-                match->offset = i;
-                match->sig = sig;
-                return match;
-            }
-
-            sig = sig->next;
-        }
-
-        sig = sigs->first;
-    }
-
-    return NULL;
-}
-
-
 int parser_parse(FILE *img, struct signatures_s *sigs, FILE *logfile) {
-    char buf[pagesize];
-    int i, read;
+    char *buf = (char *) malloc(pagesize);
+    char *bufcpy = buf;
+    size_t base = 0, basecpy = 0;
+    int i, read, readcpy, offset;
     struct signature_s *sig = sigs->first;
     struct match_s *match;
     
-    while ((read = fread(buf, 1, pagesize, img)) != 0) {
-        
-        if ((match = match_header(buf, read, sigs)) != NULL) {
-            fseeko(img, match->offset - read, SEEK_CUR);
-            extract_to_footer(img, match->sig, logfile);
-            free(match);
+    while (1) {
+      
+        readcpy = read = fread(buf, 1, pagesize, img);
+
+        if (read == 0)
+            break;
+
+        while (sig != NULL) {
+            if ((offset = match_sequence(buf, read, sig->header)) != NO_MATCH) {
+                extract_to_footer(img, base + offset, sig, logfile);
+                base += offset + 1;
+                buf  += offset + 1;
+                read -= offset + 1;
+                continue;
+            }
+            
+            base = basecpy;
+            buf  = bufcpy;
+            read = readcpy;
+            sig  = sig->next;
         }
-        else if (read > pagesize - margin) {
-            fseeko(img, -margin, SEEK_CUR);
-        }
+
+        basecpy = base = base + read;
+        sig = sigs->first;
     }
 
+    free(buf);
     return 0;
 }

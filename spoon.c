@@ -59,6 +59,7 @@ void main(int argc, char* argv[]) {
     fprintf(logfile, "%s\n", timeMsg);
     fprintf(logfile, "Extracted Files\n");
     fprintf(logfile, "===============\n");
+    fflush(logfile);
 
     parser_parse(fp, sigs, logfile);
     fclose(fp);

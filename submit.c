@@ -18,10 +18,17 @@ void submit_hashes(FILE *in, FILE *out, int sock) {
     }
 
     while (fscanf(in, "%32ms,%ms\n", &hash, &fname) != EOF) {
+        printf("Sending hash: %s\n", hash);
+        
         send(sock, hash, strlen(hash), 0);
         send(sock, "\n", 1, 0);
         recv(sock, buffer, 255, 0);
-        fprintf(out, "%s", buffer);
+
+        fflush(out);
+        if (!quiet) {        
+            fprintf(out, "%s", buffer);
+            fflush(stdout);
+        }
     }
 }
 
